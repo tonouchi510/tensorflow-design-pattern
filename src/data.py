@@ -1,63 +1,52 @@
+# 前処理や、データオーグメンテージョンに使用する関数
+
 import tensorflow as tf
-from tensorflow.python.lib.io import file_io
-from tensorflow.python.data.ops.readers import TFRecordDatasetV2
-from tensorflow.python.framework.ops import Tensor
-from typing import List
-import json
+import numpy as np
 
 
-def get_dataset(dataset_path: str,
-                global_batch_size: int,
-                split: str) -> TFRecordDatasetV2:
-    """tensorflowのデータパイプラインの構築を行う関数.
+# 前処理用関数（以下、画像分類の例）
+def preprocess_func(
+    example,
+    size: int,
+    num_classes: int
+):
+    """前処理をここに記述し、データパイプラインに渡す
 
-    ここではTFRecordを使う実装例を紹介している.
-    必要に応じて任意にカスタマイズして使う.
-
-    Args:
-        dataset_path {str} -- データセットファイルが保存されているパス.
-        split {str} -- データセットのスプリット（train/valid/test）
-        global_batch_size {int} -- バッチサイズ. 特に、distributeStrategyを使う前は分割前のバッチサイズ. 
-
-    Returns:
-        TFRecordDatasetV2:  構築したtensorflowのデータパイプライン.
+    TFRecordをパースし、前処理にかけたデータを返す
     """
-    def preprocessing(example: Tensor, param: str):
-        """データパイプラインに組み込む前処理関数
+    # decode the TFRecord
+    features = {
+        "image": tf.io.FixedLenFeature([], tf.string, default_value=""),
+        "label": tf.io.FixedLenFeature([], tf.int32),
+    }
 
-        tfrecordのパースや入力画像の前処理、リサイズ等々.
+    example = tf.io.parse_single_example(example, features)
+    image = tf.image.decode_png(example["image"], channels=3)
+    image = tf.image.resize_with_pad(image, size, size, method="bilinear", antialias=False)
+    image = tf.image.per_image_standardization(image)
+    label = tf.one_hot(example["label"], num_classes)
+    return image, label
 
-        Args:
-            example (Tensor): 
-            param (str): 前処理関数に渡す何らかのパラメータ
 
-        Returns:
-            [type]: [description]
-        """
-        return
+# データオーグメンテーション関数（以下、画像の基本的なオーグメンテージョン）
+def augmentation_func(x, y):
+    """データオーグメンテーションはここに記述
+    Args:
+        x: image
+        y: label
+    
+    ※引数は学習データによって異なるので目的のものに書き換える
+    """
+    def augment_image(image):
+        rand_r = np.random.random()
+        h, w, c = image.get_shape()
+        dn = np.random.randint(15, size=1)[0]+1
+        if  rand_r < 0.25:
+            image = tf.image.random_crop(image, size=[h-dn, w-dn, c])
+            image = tf.image.resize(image, size=[h, w])
+        elif rand_r >= 0.25 and rand_r < 0.75:
+            image = tf.image.resize_with_crop_or_pad(image, h+dn, w+dn)
+            image = tf.image.random_crop(image, size=[h, w, c])
+        return image
 
-    file_names = tf.io.gfile.glob(f"{dataset_path}/{split}-*.tfrec")
-
-    # Build a pipeline
-    option = tf.data.Options()
-    option.experimental_deterministic = False
-
-    dataset = tf.data.TFRecordDataset(file_names, num_parallel_reads=tf.data.experimental.AUTOTUNE)
-    if split == "train":
-        dataset = (
-            dataset
-                .with_options(option)
-                .map(lambda x: preprocessing(x, "~~~"), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                .shuffle(512, reshuffle_each_iteration=True)
-                .batch(global_batch_size, drop_remainder=True)
-                .prefetch(tf.data.experimental.AUTOTUNE)
-        )
-    else:
-        dataset = (
-            dataset
-                .with_options(option)
-                .map(lambda x: preprocessing(x, "~~~"), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-                .batch(global_batch_size, drop_remainder=False)
-                .prefetch(tf.data.experimental.AUTOTUNE)
-        )
-    return dataset
+    return augment_image(x), y
