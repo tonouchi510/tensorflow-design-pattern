@@ -4,13 +4,15 @@ from absl import app
 from absl import flags
 
 from utils import create_data_pipeline, get_callbacks
-from src.data import preprocess_func, augmentation_func
+from src.data import preprocess_func_partial, augmentation_func_partial
 from src.losses import get_loss_func
 from src.models import build_model
 
 # Random seed fixation
 tf.random.set_seed(666)
 np.random.seed(666)
+
+INPUT_SHAPE = [112, 112, 3]
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string(
@@ -63,9 +65,9 @@ def main(argv):
         distribute_strategy = tf.distribute.TPUStrategy(cluster)
         with distribute_strategy.scope():
             # distribute_strategyのスコープ内でbuildする必要がある
-            model = build_model(FLAGS.model_type, FLAGS.input_shape, num_classes=FLAGS.num_classes)
+            model = build_model(FLAGS.model_type, INPUT_SHAPE, num_classes=FLAGS.num_classes)
     else:
-        model = build_model(FLAGS.model_type, FLAGS.input_shape, num_classes=FLAGS.num_classes)
+        model = build_model(FLAGS.model_type, INPUT_SHAPE, num_classes=FLAGS.num_classes)
     model.summary()
 
     # トレーニングの設定
@@ -78,14 +80,14 @@ def main(argv):
         dataset_path=FLAGS.dataset_path,
         batch_size=FLAGS.global_batch_size,
         split="train",
-        preprocess_func=preprocess_func,
-        augmentation_func=augmentation_func
+        preprocess_func=preprocess_func_partial,
+        augmentation_func=augmentation_func_partial
     )
     valid_ds = create_data_pipeline(
         dataset_path=FLAGS.dataset_path,
         batch_size=FLAGS.global_batch_size,
         split="valid",
-        preprocess_func=preprocess_func
+        preprocess_func=preprocess_func_partial
     )
 
     # コールバックの取得

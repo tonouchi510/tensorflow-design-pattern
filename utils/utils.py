@@ -35,17 +35,18 @@ def create_data_pipeline(
         dataset = (
             dataset
                 .with_options(option)
-                .map(lambda x: preprocess_func(x, "~~~"), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                .map(lambda example: preprocess_func(example), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 .map(lambda x, y: augmentation_func(x, y), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 .shuffle(512, reshuffle_each_iteration=True)
                 .batch(batch_size, drop_remainder=True)
                 .prefetch(tf.data.experimental.AUTOTUNE)
         )
     elif split == "valid" or split == "test":
+        # valid/testデータの時はDAやshuffleしない
         dataset = (
             dataset
                 .with_options(option)
-                .map(lambda x: preprocess_func(x, "~~~"), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+                .map(lambda example: preprocess_func(example), num_parallel_calls=tf.data.experimental.AUTOTUNE)
                 .batch(batch_size, drop_remainder=False)
                 .prefetch(tf.data.experimental.AUTOTUNE)
         )

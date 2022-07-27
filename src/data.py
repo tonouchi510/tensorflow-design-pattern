@@ -2,6 +2,10 @@
 
 import tensorflow as tf
 import numpy as np
+import functools
+from absl import flags
+
+FLAGS = flags.Flag
 
 
 # 前処理用関数（以下、画像分類の例）
@@ -50,3 +54,15 @@ def augmentation_func(x, y):
         return image
 
     return augment_image(x), y
+
+
+# パラメータを予め渡しておく
+preprocess_func_partial = functools.partial(
+    preprocess_func,
+    size=112,
+    num_classes=FLAGS.num_classes,
+)
+
+augmentation_func_partial = functools.partial(
+    augmentation_func,
+)
