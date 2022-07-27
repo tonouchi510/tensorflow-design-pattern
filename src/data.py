@@ -66,3 +66,5 @@ preprocess_func_partial = functools.partial(
 augmentation_func_partial = functools.partial(
     augmentation_func,
 )
+# カスタマイズが必要ない場合
+#augmentation_func_partial = lambda x, y: (x, y)

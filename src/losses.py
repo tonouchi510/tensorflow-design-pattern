@@ -28,3 +28,5 @@ loss_func = functools.partial(
     custom_loss_func,
     delta=FLAGS.delta
 )
+# カスタマイズが必要ない場合
+#loss_func = tf.keras.losses.CategoricalCrossentropy()
