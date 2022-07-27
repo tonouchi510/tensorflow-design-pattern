@@ -1,21 +1,30 @@
 import tensorflow as tf
-from typing import Callable
+import functools
+from absl import flags
+
+FLAGS = flags.Flag
 
 
-# 損失関数用（以下例：適当にHuberLossっぽい要素を追加してみた例）
-def get_loss_func(delta=1.0) -> Callable:
-    """指定したパラメータで、損失関数を返す
+def custom_loss_func(y_true, y_pred, delta=1.0):
+    """カスタムの損失関数の実装
+
+    ここでは、適当にCCEEにHuberLossっぽい要素を追加してみた例
 
     Args:
+        y_true (_type_): _description_
+        y_pred (_type_): _description_
         delta (float, optional): _description_. Defaults to 1.0.
 
     Returns:
-        Callable: カスタムの損失関数
+        _type_: lossの値
     """
-    def custom_loss_func(y_true, y_pred):
-        error = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
-        abs_error = tf.abs(error)
-        loss = tf.where(condition=abs_error <= delta, x=0.5 * tf.square(error), y=delta * abs_error - 0.5 * tf.square(delta))
-        return loss
+    error = tf.keras.losses.categorical_crossentropy(y_true, y_pred)
+    abs_error = tf.abs(error)
+    loss = tf.where(condition=abs_error <= delta, x=0.5 * tf.square(error), y=delta * abs_error - 0.5 * tf.square(delta))
+    return loss
 
-    return custom_loss_func
+
+loss_func = functools.partial(
+    custom_loss_func,
+    delta=FLAGS.delta
+)

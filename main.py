@@ -5,7 +5,7 @@ from absl import flags
 
 from utils import create_data_pipeline, get_callbacks
 from src.data import preprocess_func_partial, augmentation_func_partial
-from src.losses import get_loss_func
+from src.losses import loss_func
 from src.models import build_model
 
 # Random seed fixation
@@ -71,7 +71,6 @@ def main(argv):
     model.summary()
 
     # トレーニングの設定
-    loss_func = get_loss_func(delta=1.0)
     optimizer = tf.keras.optimizers.Adam(learning_rate=FLAGS.learning_rate)
     model.compile(loss=loss_func, optimizer=optimizer, metrics=["accuracy"])
 
